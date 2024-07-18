@@ -4,8 +4,10 @@ import os
 import click
 import requests as re
 from tqdm import tqdm
-import gzip
-import shutil
+
+### TODO
+# add single cell data format confirmation and error logging
+# output total size
 
 
 @click.command()
@@ -88,6 +90,7 @@ def extract_nested_tarfile(outer_tar_path, output_folder):
             # Extract the current member
             outer_tar.extract(member, output_folder)
             
+            """
             inner_tar_path = os.path.join(output_folder, member.name)
             
             # Check if the extracted member is a tarfile
@@ -100,6 +103,7 @@ def extract_nested_tarfile(outer_tar_path, output_folder):
                 raise ValueError(f"Unexpected file type: {inner_tar_path}, expected .gz file")
             
             os.remove(inner_tar_path)
+            """
             
     # Remove outer tar path            
     # os.remove(outer_tar_path)
@@ -123,17 +127,17 @@ def extract_sample_id(file_name):
     return strip_file_name
 
 def extract_seurat_file_name(file_name):
-    if file_name.endswith("barcodes.tsv"):
-        return "barcodes.tsv"
+    if file_name.endswith("barcodes.tsv.gz"):
+        return "barcodes.tsv.gz"
     
-    if file_name.endswith("features.tsv"):
-        return "features.tsv"
+    if file_name.endswith("features.tsv.gz"):
+        return "features.tsv.gz"
     
-    if file_name.endswith("matrix.mtx"):
-        return "matrix.mtx"
+    if file_name.endswith("matrix.mtx.gz"):
+        return "matrix.mtx.gz"
     
-    if file_name.endswith("genes.tsv"):
-        return "genes.tsv"
+    if file_name.endswith("genes.tsv.gz"):
+        return "features.tsv.gz"
     
     return file_name
 
