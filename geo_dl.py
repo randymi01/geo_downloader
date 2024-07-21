@@ -4,6 +4,8 @@ import os
 import click
 import requests as re
 from tqdm import tqdm
+import gzip
+import shutil
 
 ### TODO
 # add single cell data format confirmation and error logging
@@ -14,18 +16,20 @@ from tqdm import tqdm
 @click.option('-c','--codes', required=True, help='relative file path containing GEO accession codes')
 @click.option('-o','--output_path', required=True, help='relative folder path for where data should be stored')
 @click.option('-d', '--delete', required=False, default=False, help='delete tar files after extraction')
-def main(codes,output_path, delete):
+@click.option('-l', '--download', required=False, default=True, help='Set true to download tar archives')
+@click.option('-e', '--extract', required=False, default=False, help='Set true to extract inner tar archives')
+def main(codes,output_path, delete, download, extract):
     os.makedirs(output_path, exist_ok=True)
 
     print("Downloading files...")
 
-    with open(codes, "r") as f:
-        accession_codes = f.read().splitlines() 
-        urls = [geo_url(code) for code in accession_codes]
-        tarball = [code+".tar" for code in accession_codes]
-        url_files = zip(urls, tarball)
-
-    download_files(url_files, output_path)
+    if download:
+        with open(codes, "r") as f:
+            accession_codes = f.read().splitlines() 
+            urls = [geo_url(code) for code in accession_codes]
+            tarball = [code+".tar" for code in accession_codes]
+            url_files = zip(urls, tarball)
+        download_files(url_files, output_path)
 
     print('\n')
     print("Extracting files...")
@@ -33,7 +37,7 @@ def main(codes,output_path, delete):
     tars = [(output_path+'/'+i, output_path + '/' + i.split('.')[0]) for i in os.listdir(output_path)]
 
 
-    extract_files(tars)
+    extract_files(tars, extract)
 
     print('\n')
     print("Organizing files...")
@@ -79,7 +83,7 @@ def download_files(url_list, output_path):
 
 # Extract Tar Files:
 
-def extract_nested_tarfile(outer_tar_path, output_folder):
+def extract_nested_tarfile(outer_tar_path, output_folder, extract_inner_tarfile):
     # Create the output folder if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)
 
@@ -90,20 +94,19 @@ def extract_nested_tarfile(outer_tar_path, output_folder):
             # Extract the current member
             outer_tar.extract(member, output_folder)
             
-            """
-            inner_tar_path = os.path.join(output_folder, member.name)
-            
-            # Check if the extracted member is a tarfile
-            
-            if inner_tar_path.endswith('.gz'):
-                with gzip.open(inner_tar_path) as f_in:
-                    with open(inner_tar_path[:-3], 'wb') as f_out:
-                        shutil.copyfileobj(f_in, f_out)
-            else:
-                raise ValueError(f"Unexpected file type: {inner_tar_path}, expected .gz file")
-            
-            os.remove(inner_tar_path)
-            """
+            if extract_inner_tarfile:
+                inner_tar_path = os.path.join(output_folder, member.name)
+                
+                # Check if the extracted member is a tarfile
+                
+                if inner_tar_path.endswith('.gz'):
+                    with gzip.open(inner_tar_path) as f_in:
+                        with open(inner_tar_path[:-3], 'wb') as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+                else:
+                    raise ValueError(f"Unexpected file type: {inner_tar_path}, expected .gz file")
+                
+                os.remove(inner_tar_path)
             
     # Remove outer tar path            
     # os.remove(outer_tar_path)
@@ -130,14 +133,26 @@ def extract_seurat_file_name(file_name):
     if file_name.endswith("barcodes.tsv.gz"):
         return "barcodes.tsv.gz"
     
+    if file_name.endswith("barcodes.tsv"):
+        return "barcodes.tsv"
+    
     if file_name.endswith("features.tsv.gz"):
         return "features.tsv.gz"
+    
+    if file_name.endswith("features.tsv"):
+        return "features.tsv"
     
     if file_name.endswith("matrix.mtx.gz"):
         return "matrix.mtx.gz"
     
+    if file_name.endswith("matrix.mtx"):
+        return "matrix.mtx"
+    
     if file_name.endswith("genes.tsv.gz"):
         return "features.tsv.gz"
+    
+    if file_name.endswith("genes.tsv"):
+        return "features.tsv"
     
     return file_name
 
@@ -155,10 +170,10 @@ def organize_folder(folder_path):
         for file in files:
             os.rename(folder_path + '/' + file, folder_path + '/' + sample_id + '/' + extract_seurat_file_name(file))
 
-def extract_files(tars):
+def extract_files(tars, inner_file_extract = False):
     with ThreadPoolExecutor(max_workers=5) as executor:
         for tar_path, output_path in tars:
-            executor.submit(extract_nested_tarfile, tar_path, output_path)
+            executor.submit(extract_nested_tarfile, tar_path, output_path, inner_file_extract)
 
 def organize_folders(folder_paths):
     with ThreadPoolExecutor(max_workers=5) as executor:
