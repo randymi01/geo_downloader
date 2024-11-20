@@ -13,11 +13,11 @@ import shutil
 
 
 @click.command()
-@click.option('-c','--codes', required=True, help='relative file path containing GEO accession codes')
-@click.option('-o','--output_path', required=True, help='relative folder path for where data should be stored')
-@click.option('-d', '--delete', required=False, default=False, help='delete tar files after extraction')
-@click.option('-l', '--download', required=False, default=True, help='Set true to download tar archives')
-@click.option('-e', '--extract', required=False, default=False, help='Set true to extract inner tar archives')
+@click.option('-c','--codes', required=True, help='relative file path containing GEO accession codes', show_default=True)
+@click.option('-o','--output_path', required=True, help='relative folder path for where data should be stored', show_default=True)
+@click.option('-d', '--delete', required=False, default=False, help='flag, invoke to delete tar files after extraction', show_default=True, is_flag = True)
+@click.option('-l', '--download', required=False, default=True, help='flag default download, invoke to NOT download tar archives', show_default=True, is_flag = True)
+@click.option('-e', '--extract', required=False, default=False, help='flag, invoke to extract inner tar archives', show_default=True, is_flag = True)
 def main(codes,output_path, delete, download, extract):
     os.makedirs(output_path, exist_ok=True)
 
